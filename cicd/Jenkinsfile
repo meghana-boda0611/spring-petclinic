@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = "us-east-1"  // Change if needed
+        TF_WORKING_DIR = "terraform"
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git 'https://your-repo-url.git'  // Replace with your actual Git repository URL
+            }
+        }
+
+        stage('Setup Terraform') {
+            steps {
+                dir("${TF_WORKING_DIR}") {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                dir("${TF_WORKING_DIR}") {
+                    sh 'terraform plan'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir("${TF_WORKING_DIR}") {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Update Kubeconfig') {
+            steps {
+                dir("${TF_WORKING_DIR}") {
+                    sh 'aws eks update-kubeconfig --region=${AWS_REGION} --name=eks-cluster'
+                }
+            }
+        }
+    }
+}
+
