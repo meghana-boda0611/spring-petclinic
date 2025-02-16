@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://your-repo-url.git'  // Replace with your actual Git repository URL
+                git 'https://github.com/meghana-boda0611/spring-petclinic.git'  // Replace with your actual Git repository URL
             }
         }
 
