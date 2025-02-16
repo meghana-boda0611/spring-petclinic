@@ -8,16 +8,6 @@ terraform {
   }
 }
 
-
 provider "aws" {
   region = var.region
-}
-
-# Add Terraform registry source for AWS VPC module
-terraform {
-  required_providers {
-    aws = {
-      source = "hashicorp/aws"
-    }
-  }
 }
