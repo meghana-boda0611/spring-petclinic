@@ -14,8 +14,10 @@ spec:
     spec:
       containers:
         - name: springboot-app
-          image: springboot-app:latest
-          imagePullPolicy: Never
+          image: 528757819999.dkr.ecr.us-east-1.amazonaws.com/springboot-app:latest
           ports:
             - containerPort: 8080
+          imagePullPolicy: Always
+      imagePullSecrets:
+        - name: ecr-secret
 
