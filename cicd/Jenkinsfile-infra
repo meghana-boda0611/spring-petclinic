@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                script {
+                    checkout scm
+                }
+            }
+        }
+
+        stage('Setup Terraform') {
+            steps {
+                script {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials']]) {
+                        sh '''
+                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                        terraform --version
+                        terraform init
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Plan Terraform') {
+            steps {
+                script {
+                    sh '''
+                    terraform plan -out=tfplan
+                    '''
+                }
+            }
+        }
+
+        stage('Apply Terraform') {
+            steps {
+                script {
+                    sh '''
+                    terraform apply -auto-approve tfplan
+                    '''
+                }
+            }
+        }
+
+        stage('Post Deployment Outputs') {
+            steps {
+                script {
+                    sh '''
+                    terraform output
+                    '''
+                }
+            }
+        }
+    }
+}
+
