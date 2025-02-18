@@ -19,17 +19,21 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    # Install Trivy if not installed
-                    if ! command -v trivy &> /dev/null; then
-                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                    # Define Trivy installation path
+                    export TRIVY_PATH="/tmp/trivy"
+        
+                    # Install Trivy if not already installed
+                    if ! command -v $TRIVY_PATH &> /dev/null; then
+                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /tmp
                     fi
-
+        
                     # Run security scan
-                    trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+                    /tmp/trivy fs --exit-code 1 --severity HIGH,CRITICAL .
                     '''
                 }
             }
         }
+        
 
         stage('Build & Push Docker Image') {
             steps {
