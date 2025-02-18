@@ -1,0 +1,82 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        ECR_REPO = '528757819999.dkr.ecr.us-east-1.amazonaws.com/springboot-app'
+        K8S_NAMESPACE = 'default'
+        IMAGE_TAG = 'latest'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/yeluru/spring-petclinic.git'
+            }
+        }
+
+        stage('SCA Security Scan') {
+            steps {
+                script {
+                    sh '''
+                    # Install Trivy if not installed
+                    if ! command -v trivy &> /dev/null; then
+                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                    fi
+
+                    # Run security scan
+                    trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+                    '''
+                }
+            }
+        }
+
+        stage('Build & Push Docker Image') {
+            steps {
+                script {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials']]) {
+                        sh '''
+                        # Login to ECR
+                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+
+                        # Build Docker image
+                        docker build -t $ECR_REPO:$IMAGE_TAG .
+
+                        # Push to ECR
+                        docker push $ECR_REPO:$IMAGE_TAG
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Update Kubernetes Deployment') {
+            steps {
+                script {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials']]) {
+                        sh '''
+                        # Update deployment.yaml to use latest image
+                        kubectl set image deployment/springboot-app springboot-app=$ECR_REPO:$IMAGE_TAG -n $K8S_NAMESPACE
+
+                        # Apply Kubernetes configurations
+                        kubectl apply -f kubernetes/deployment.yaml
+                        kubectl apply -f kubernetes/service.yaml
+
+                        # Verify deployment
+                        kubectl rollout status deployment/springboot-app -n $K8S_NAMESPACE
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment successful!"
+        }
+        failure {
+            echo "❌ Deployment failed. Check logs!"
+        }
+    }
+}
