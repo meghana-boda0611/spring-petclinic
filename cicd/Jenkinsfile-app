@@ -42,17 +42,7 @@ pipeline {
                 script {
                     sh '''
                     echo "▶️ Building Spring Boot Application..."
-
-                    if [ -f "pom.xml" ]; then
-                        echo "📌 Detected Maven project"
-                        mvn clean package -DskipTests
-                    elif [ -f "build.gradle" ]; then
-                        echo "📌 Detected Gradle project"
-                        ./gradlew build -x test
-                    else
-                        echo "❌ ERROR: No valid build file found!"
-                        exit 1
-                    fi
+                    ./mvnw clean package -DskipTests
                     '''
                 }
             }
