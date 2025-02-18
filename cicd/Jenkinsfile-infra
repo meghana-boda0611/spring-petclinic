@@ -33,6 +33,7 @@ pipeline {
             steps {
                 script {
                     sh '''
+		    cd terraform
                     terraform plan -out=tfplan
                     '''
                 }
@@ -43,6 +44,7 @@ pipeline {
             steps {
                 script {
                     sh '''
+		    cd terraform
                     terraform apply -auto-approve tfplan
                     '''
                 }
@@ -53,6 +55,7 @@ pipeline {
             steps {
                 script {
                     sh '''
+		    cd terraform
                     terraform output
                     '''
                 }
