@@ -60,14 +60,14 @@ pipeline {
                 script {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials']]) {
                         sh '''
+                        echo "▶️ Ensuring Docker Buildx is enabled..."
+                        docker buildx create --use || true
+
                         echo "▶️ Logging into AWS ECR..."
                         aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
 
-                        echo "▶️ Building Docker Image..."
-                        docker build -t $ECR_REPO:$IMAGE_TAG .
-
-                        echo "▶️ Pushing Docker Image to AWS ECR..."
-                        docker push $ECR_REPO:$IMAGE_TAG
+                        echo "▶️ Building Multi-Platform Docker Image..."
+                        docker buildx build --platform linux/amd64 -t $ECR_REPO:$IMAGE_TAG --push .
 
                         echo "✅ Docker image pushed successfully!"
                         '''
@@ -81,15 +81,22 @@ pipeline {
                 script {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials']]) {
                         sh '''
+                        echo "▶️ Creating/Updating Kubernetes ECR Secret..."
+                        kubectl delete secret ecr-secret --ignore-not-found
+                        aws ecr get-login-password --region $AWS_REGION | kubectl create secret docker-registry ecr-secret \
+                        --docker-server=$ECR_REPO \
+                        --docker-username=AWS \
+                        --docker-password="$(aws ecr get-login-password --region $AWS_REGION)"
+
                         echo "▶️ Applying Kubernetes Deployment and Service..."
                         kubectl apply -f deployment.yaml
                         kubectl apply -f service.yaml
 
-                        echo "▶️ Updating Deployment Image..."
+                        echo "▶️ Updating Image in Deployment..."
                         kubectl set image deployment/springboot-app springboot-app=$ECR_REPO:$IMAGE_TAG -n $K8S_NAMESPACE
 
-                        echo "▶️ Verifying Deployment Rollout..."
-                        kubectl rollout status deployment/springboot-app -n $K8S_NAMESPACE
+                        echo "▶️ Restarting Deployment to Apply Changes..."
+                        kubectl rollout restart deployment/springboot-app
 
                         echo "✅ Kubernetes deployment updated successfully!"
                         '''
