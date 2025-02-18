@@ -19,35 +19,51 @@ pipeline {
             steps {
                 script {
                     sh '''
+                    echo "▶️ Running Security Scan with Trivy..."
+
                     # Define Trivy installation path
                     export TRIVY_PATH="/tmp/trivy"
-        
+
                     # Install Trivy if not already installed
                     if ! command -v $TRIVY_PATH &> /dev/null; then
                         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /tmp
                     fi
-        
+
                     # Run security scan
                     /tmp/trivy fs --exit-code 1 --severity HIGH,CRITICAL .
                     '''
                 }
             }
         }
-        
 
         stage('Build & Push Docker Image') {
             steps {
                 script {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials']]) {
                         sh '''
-                        # Login to ECR
+                        echo "▶️ Checking workspace structure..."
+                        pwd
+                        ls -l
+
+                        # Ensure Dockerfile exists
+                        if [ ! -f Dockerfile ]; then
+                            echo "❌ ERROR: Dockerfile not found!"
+                            exit 1
+                        fi
+
+                        # Login to AWS ECR
+                        echo "▶️ Logging into AWS ECR..."
                         aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
 
                         # Build Docker image
+                        echo "▶️ Building Docker Image..."
                         docker build -t $ECR_REPO:$IMAGE_TAG .
 
                         # Push to ECR
+                        echo "▶️ Pushing Docker Image to AWS ECR..."
                         docker push $ECR_REPO:$IMAGE_TAG
+
+                        echo "✅ Docker image pushed successfully!"
                         '''
                     }
                 }
@@ -59,15 +75,24 @@ pipeline {
                 script {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials']]) {
                         sh '''
-                        # Update deployment.yaml to use latest image
-                        kubectl set image deployment/springboot-app springboot-app=$ECR_REPO:$IMAGE_TAG -n $K8S_NAMESPACE
+                        echo "▶️ Updating Kubernetes Deployment..."
 
                         # Apply Kubernetes configurations
-                        kubectl apply -f kubernetes/deployment.yaml
-                        kubectl apply -f kubernetes/service.yaml
+                        echo "▶️ Applying Deployment YAML..."
+                        kubectl apply -f deployment.yaml
 
-                        # Verify deployment
+                        echo "▶️ Applying Service YAML..."
+                        kubectl apply -f service.yaml
+
+                        # Update deployment image
+                        echo "▶️ Updating Image in Deployment..."
+                        kubectl set image deployment/springboot-app springboot-app=$ECR_REPO:$IMAGE_TAG -n $K8S_NAMESPACE
+
+                        # Verify deployment rollout
+                        echo "▶️ Verifying Deployment Rollout..."
                         kubectl rollout status deployment/springboot-app -n $K8S_NAMESPACE
+
+                        echo "✅ Kubernetes deployment updated successfully!"
                         '''
                     }
                 }
@@ -84,3 +109,4 @@ pipeline {
         }
     }
 }
+
