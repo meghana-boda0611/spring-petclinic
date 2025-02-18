@@ -21,17 +21,21 @@ pipeline {
                     sh '''
                     echo "▶️ Running Security Scan with Trivy..."
 
-                    # Install Trivy if not installed
-                    if ! command -v trivy &> /dev/null; then
-                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                    # Define a user-writable directory for Trivy installation
+                    export TRIVY_PATH="$WORKSPACE/trivy"
+                    
+                    # Install Trivy if not already installed
+                    if ! [ -x "$TRIVY_PATH" ]; then
+                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $WORKSPACE
                     fi
 
-                    # Run security scan
-                    trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+                    # Run security scan using the local Trivy binary
+                    $TRIVY_PATH fs --exit-code 1 --severity HIGH,CRITICAL .
                     '''
                 }
             }
         }
+
 
         stage('Build Spring Boot Application') {
             steps {
