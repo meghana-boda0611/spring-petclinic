@@ -40,7 +40,7 @@ pipeline {
             }
         }
 
-        /*stage('Plan Terraform') {
+        stage('Plan Terraform') {
             steps {
                 script {
                     sh '''
@@ -49,7 +49,7 @@ pipeline {
                     '''
                 }
             }
-        }*/
+        }
 
         stage('Apply Terraform') {
             steps {
