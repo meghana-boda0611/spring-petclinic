@@ -56,7 +56,7 @@ pipeline {
                 script {
                     sh '''
 		    cd terraform
-                    terraform destroy -auto-approve tfplan
+                    terraform apply -auto-approve tfplan
                     '''
                 }
             }
