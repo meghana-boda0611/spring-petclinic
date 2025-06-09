@@ -36,18 +36,19 @@ pipeline {
                 script {
                     sh '''
                     echo "▶️ Building Spring Boot Application..."
-                    # Ensure Java and Maven are available
                     java -version || { echo "❌ ERROR: Java is not installed!"; exit 1; }
-                    mvn -version || { echo "❌ ERROR: Maven is not installed!"; exit 1; }
 
-                    # Build Spring Boot JAR (skip Checkstyle validation)
-                    mvn clean package -DskipTests -Dcheckstyle.skip=true
+                    # Use full path to Maven
+                    /opt/homebrew/Cellar/maven/3.9.10/libexec/bin/mvn -version || { echo "❌ ERROR: Maven is not installed!"; exit 1; }
+
+                    /opt/homebrew/Cellar/maven/3.9.10/libexec/bin/mvn clean package -DskipTests -Dcheckstyle.skip=true
 
                     echo "✅ Spring Boot application built successfully!"
                     '''
                 }
             }
         }
+
 
         stage('Build & Push Docker Image') {
             steps {
