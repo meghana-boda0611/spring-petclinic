@@ -52,17 +52,17 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 script {
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_Credentials']]) {
-                        sh '''
-                        echo "▶️ Ensuring Docker Buildx is enabled..."
-                        docker buildx create --use || true
+                    sh '''
+                    echo "▶️ Ensuring Docker Buildx is enabled..."
+                    docker buildx create --use || true
 
-                        echo "▶️ Building Multi-Platform Docker Image..."
-                        docker buildx build --platform linux/amd64 -t $ECR_REPO:$IMAGE_TAG --push .
+                    echo "▶️ Building Multi-Platform Docker Image..."
+                    docker buildx build --platform linux/amd64 -t $ECR_REPO:$IMAGE_TAG --push .
 
-                        echo "✅ Docker image pushed successfully!"
-                        '''
-                    }
+                    echo "✅ Docker image pushed successfully!"
+                    '''
+                    
+                   
                 }
             }
         }
