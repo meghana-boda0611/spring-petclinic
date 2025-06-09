@@ -56,9 +56,6 @@ pipeline {
                     echo "▶️ Ensuring Docker Buildx is enabled..."
                     docker buildx create --use || true
 
-                    echo "▶️ Building Multi-Platform Docker Image..."
-                    docker buildx build --platform linux/amd64 -t $ECR_REPO:$IMAGE_TAG --push .
-
                     echo "✅ Docker image pushed successfully!"
                     '''
                     
