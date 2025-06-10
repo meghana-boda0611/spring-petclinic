@@ -52,18 +52,18 @@ pipeline {
                 SONARQUBE_SCANNER_HOME = tool 'SonarQubeScanner'  // Name of your SonarQube scanner tool configured in Jenkins
             }
             steps {
-                script {
-                    sh '''
-                    echo "▶️ Starting SonarQube Analysis..."
+        script {
+            sh '''
+                echo "▶️ Starting SonarQube Analysis..."
 
-                    $SONARQUBE_SCANNER_HOME/bin/sonar-scanner \
-                      -Dsonar.projectKey=spring-petclinic \
-                      -Dsonar.sources=. \
-                      -Dsonar.host.url=http://localhost:9000 \
-                      -Dsonar.login=$SONAR_TOKEN
+                $SONARQUBE_SCANNER_HOME/bin/sonar-scanner \
+                  -Dsonar.projectKey=spring-petclinic \
+                  -Dsonar.sources=. \
+                  -Dsonar.host.url=http://localhost:9000 \
+                  -Dsonar.login=$SONAR_TOKEN
 
-                    echo "✅ SonarQube analysis completed!"
-                    '''
+                echo "✅ SonarQube analysis completed!"
+            '''
                 }
             }
         }
