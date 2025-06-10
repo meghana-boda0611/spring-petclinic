@@ -5,6 +5,8 @@ pipeline {
         AWS_REGION = 'us-east-1'
         REPO_NAME  = 'springboot-petclinic'
         IMAGE_TAG  = 'latest'
+        ACCOUNT_ID = '653858193746'
+        
     }
 
     stages {
@@ -39,19 +41,32 @@ pipeline {
         }
 
         stage('Deploy to EKS') {
+            environment {
+            AWS_REGION = 'us-east-1'              // Change as needed
+            CLUSTER_NAME = 'springboot-eks-cluster' // Change to your real EKS cluster name
+            }
             steps {
+                withCredentials([[
+                $class: 'AmazonWebServicesCredentialsBinding',
+                credentialsId: 'AWS_Credentials'
+            ]]) 
+            {
                 script {
                     sh '''
+                    echo "🔐 Setting up kubeconfig for EKS cluster..."
+                    aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
                     echo "🚀 Applying manifest to EKS cluster..."
                     kubectl apply -f k8s/deployment.yaml
 
-                    echo "🔍 Verifying rollout..."
-                    kubectl rollout status deployment/springboot-petclinic -n default || exit 1
+                    echo "📊 Verifying deployment rollout..."
+                    kubectl rollout status deployment/springboot-petclinic
                     '''
                 }
             }
-        }
+         }
     }
+
 
     post {
         success {
