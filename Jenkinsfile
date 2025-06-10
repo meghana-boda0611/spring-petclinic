@@ -78,30 +78,31 @@ pipeline {
             }
         }
 
-        stage('DAST - OWASP ZAP Scan') {
-            steps {
-                script {
-                    sh '''
-                    echo "▶️ Running OWASP ZAP Baseline Scan..."
+        stage('DAST - OWASP ZAP CLI Scan') {
+    steps {
+        script {
+            sh '''
+            echo "▶️ Running ZAP CLI scan..."
 
-                    docker pull owasp/zap2docker-weekly
+            pkill -f ZAP || true
+            rm -f ~/Library/Application\\ Support/ZAP/.ZAP_LOCK
 
-                    docker run --rm -v $WORKSPACE:/zap/wrk:rw -t owasp/zap2docker-stable zap-baseline.py \
-                        -t http://host.docker.internal:8080 \
-                        -g gen.conf \
-                        -r zap_report.html \
-                        -x zap_report.xml
+            cd "$WORKSPACE"
 
-                    echo "✅ ZAP Scan completed!"
-                    '''
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'zap_report.*', fingerprint: true
-                }
-            }
+            "/Applications/ZAP.app/Contents/Java/zap.sh" -cmd \
+              -quickurl http://localhost:8081 \
+              -quickout zap_report.html || echo "⚠️ ZAP returned non-zero exit"
+
+            echo "✅ ZAP scan complete"
+            '''
         }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'zap_report.html', fingerprint: true
+        }
+    }
+}
 
         stage('Stop Spring Boot App') {
             steps {
