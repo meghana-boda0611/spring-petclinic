@@ -90,7 +90,7 @@ pipeline {
                     cd "$WORKSPACE"
 
                     "/Applications/ZAP.app/Contents/Java/zap.sh" -cmd \
-                      -quickurl http://localhost:8081 \
+                      -quickurl http://localhost:8081/owners \
                       -quickout "$WORKSPACE/zap_report.html" || echo "⚠️ ZAP returned non-zero exit"
 
                     echo "✅ ZAP scan completed!"
