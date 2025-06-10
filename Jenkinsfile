@@ -98,7 +98,14 @@ pipeline {
                 }
             }
             
-            stage('Docker Build & Push to ECR') {
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap_report.html', fingerprint: true
+                }
+            }
+        }
+        
+        stage('Docker Build & Push to ECR') {
                 environment {
                 AWS_REGION = 'us-east-1' // Change if needed
                 REPO_NAME  = 'springboot-petclinic' // Change if needed
@@ -125,13 +132,6 @@ pipeline {
                         echo "✅ Docker image pushed to ECR: $IMAGE_NAME:latest"
                         '''
                     }
-                }
-            }
-        }
-
-            post {
-                always {
-                    archiveArtifacts artifacts: 'zap_report.html', fingerprint: true
                 }
             }
         }
