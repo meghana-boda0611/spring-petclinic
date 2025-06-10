@@ -1,7 +1,6 @@
 pipeline {
     agent any
 
-
     stages {
         stage('Checkout Code') {
             steps {
@@ -30,7 +29,6 @@ pipeline {
             }
         }
 
-
         stage('Build Spring Boot Application') {
             steps {
                 script {
@@ -49,30 +47,34 @@ pipeline {
             }
         }
 
-
-        stage('Build & Push Docker Image') {
+        stage('SonarQube Analysis') {
+            environment {
+                SONARQUBE_SCANNER_HOME = tool 'SonarQube Scanner'  // Name of your SonarQube scanner tool configured in Jenkins
+            }
             steps {
                 script {
                     sh '''
-                    echo "▶️ Ensuring Docker Buildx is enabled..."
-                    docker buildx create --use || true
+                    echo "▶️ Starting SonarQube Analysis..."
 
-                    echo "✅ Docker image pushed successfully!"
+                    $SONARQUBE_SCANNER_HOME/bin/sonar-scanner \
+                      -Dsonar.projectKey=spring-petclinic \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=http://localhost:9000 \
+                      -Dsonar.login=${SonarQube token}
+
+                    echo "✅ SonarQube analysis completed!"
                     '''
-                    
-                   
                 }
             }
         }
-
     }
 
     post {
         success {
-            echo "✅ Push successful!"
+            echo "✅ Pipeline completed successfully!"
         }
         failure {
-            echo "❌ Push failed. Check logs!"
+            echo "❌ Pipeline failed. Check logs!"
         }
     }
 }
