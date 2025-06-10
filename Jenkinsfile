@@ -49,7 +49,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             environment {
-                SONARQUBE_SCANNER_HOME = tool 'SonarQube Scanner'  // Name of your SonarQube scanner tool configured in Jenkins
+                SONARQUBE_SCANNER_HOME = tool 'SonarQubeScanner''  // Name of your SonarQube scanner tool configured in Jenkins
             }
             steps {
                 script {
@@ -60,7 +60,7 @@ pipeline {
                       -Dsonar.projectKey=spring-petclinic \
                       -Dsonar.sources=. \
                       -Dsonar.host.url=http://localhost:9000 \
-                      -Dsonar.login=${SonarQube token}
+                      -Dsonar.login=$SONAR_TOKEN
 
                     echo "✅ SonarQube analysis completed!"
                     '''
