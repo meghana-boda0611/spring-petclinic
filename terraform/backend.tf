@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "your-terraform-karmegram061102032211"
+  bucket = "your-terraform-karmeghram-vn-061102032211"
 
   lifecycle {
     prevent_destroy = true
