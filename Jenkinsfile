@@ -31,13 +31,10 @@ pipeline {
                 script {
                     sh '''
                     echo "▶️ Building Spring Boot Application..."
-                    java -version || { echo "❌ ERROR: Java is not installed!"; exit 1; }
-
-                    /opt/homebrew/Cellar/maven/3.9.10/libexec/bin/mvn -version || { echo "❌ ERROR: Maven is not installed!"; exit 1; }
-
+                    java -version || { echo "❌ Java not found!"; exit 1; }
+                    /opt/homebrew/Cellar/maven/3.9.10/libexec/bin/mvn -version || { echo "❌ Maven not found!"; exit 1; }
                     /opt/homebrew/Cellar/maven/3.9.10/libexec/bin/mvn clean package -DskipTests -Dcheckstyle.skip=true
-
-                    echo "✅ Spring Boot application built successfully!"
+                    echo "✅ Build successful!"
                     '''
                 }
             }
@@ -51,58 +48,61 @@ pipeline {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     script {
                         sh '''
-                        echo "▶️ Starting SonarQube Analysis..."
-
+                        echo "▶️ SonarQube Analysis..."
                         $SONARQUBE_SCANNER_HOME/bin/sonar-scanner \
-                        -Dsonar.projectKey=spring-petclinic \
-                        -Dsonar.sources=. \
-                        -Dsonar.java.binaries=target/classes \
-                        -Dsonar.host.url=http://localhost:9000 \
-                        -Dsonar.login=$SONAR_TOKEN
+                          -Dsonar.projectKey=spring-petclinic \
+                          -Dsonar.sources=. \
+                          -Dsonar.java.binaries=target/classes \
+                          -Dsonar.host.url=http://localhost:9000 \
+                          -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
                 }
             }
         }
 
-        stage('Run Spring Boot App (Temporary for DAST)') {
+        stage('Run Spring Boot App (for DAST)') {
             steps {
                 script {
                     sh '''
-                    echo "▶️ Starting Spring Boot app in background for ZAP scan..."
-                    nohup java -jar target/*.jar > app.log 2>&1 &
+                    echo "▶️ Starting Spring Boot app on port 8081..."
+                    nohup java -jar target/*.jar --server.port=8081 > app.log 2>&1 &
                     sleep 15
-                    curl -I http://localhost:8080 || { echo "❌ App failed to start"; exit 1; }
+                    curl -I http://localhost:8081 || { echo "❌ App did not start"; exit 1; }
                     '''
                 }
             }
         }
 
         stage('DAST - OWASP ZAP CLI Scan') {
-    steps {
-        script {
-            sh '''
-            echo "▶️ Running ZAP CLI scan..."
+            steps {
+                script {
+                    sh '''
+                    echo "▶️ Running ZAP CLI scan..."
 
-            pkill -f ZAP || true
-            rm -f ~/Library/Application\\ Support/ZAP/.ZAP_LOCK
+                    pkill -f ZAP || true
+                    rm -f "$HOME/Library/Application Support/ZAP/.ZAP_LOCK"
 
-            cd "$WORKSPACE"
+                    sleep 10  # Allow app to stabilize
 
-            "/Applications/ZAP.app/Contents/Java/zap.sh" -cmd \
-              -quickurl http://localhost:8081 \
-              -quickout zap_report.html || echo "⚠️ ZAP returned non-zero exit"
+                    [ -x "/Applications/ZAP.app/Contents/Java/zap.sh" ] || { echo "❌ ZAP CLI not found!"; exit 1; }
 
-            echo "✅ ZAP scan complete"
-            '''
+                    cd "$WORKSPACE"
+
+                    "/Applications/ZAP.app/Contents/Java/zap.sh" -cmd \
+                      -quickurl http://localhost:8081 \
+                      -quickout zap_report.html || echo "⚠️ ZAP returned non-zero exit"
+
+                    echo "✅ ZAP scan completed!"
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap_report.html', fingerprint: true
+                }
+            }
         }
-    }
-    post {
-        always {
-            archiveArtifacts artifacts: 'zap_report.html', fingerprint: true
-        }
-    }
-}
 
         stage('Stop Spring Boot App') {
             steps {
