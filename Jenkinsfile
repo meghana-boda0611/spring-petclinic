@@ -97,6 +97,38 @@ pipeline {
                     '''
                 }
             }
+            
+            stage('Docker Build & Push to ECR') {
+                environment {
+                AWS_REGION = 'us-east-1' // Change if needed
+                REPO_NAME  = 'springboot-petclinic' // Change if needed
+            }
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'AWS_Credentials'
+                ]]) {
+                    script {
+                        sh '''
+                        echo "🐳 Logging into AWS ECR..."
+                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.$AWS_REGION.amazonaws.com
+
+                        ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+                        IMAGE_NAME=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME
+
+                        echo "🐳 Building Docker image..."
+                        docker build -t $IMAGE_NAME:latest .
+
+                        echo "📤 Pushing image to ECR..."
+                        docker push $IMAGE_NAME:latest
+
+                        echo "✅ Docker image pushed to ECR: $IMAGE_NAME:latest"
+                        '''
+                    }
+                }
+            }
+        }
+
             post {
                 always {
                     archiveArtifacts artifacts: 'zap_report.html', fingerprint: true
