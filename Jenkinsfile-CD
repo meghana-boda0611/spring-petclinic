@@ -1,1 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        REPO_NAME  = 'springboot-petclinic'
+        IMAGE_TAG  = 'latest'
+    }
+
+    stages {
+        stage('Checkout Deployment Manifests') {
+            steps {
+                git branch: 'main', url: 'https://github.com/meghana-boda0611/spring-petclinic.git'
+            }
+        }
+
+        stage('Update K8s Deployment Image') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'AWS_Credentials'
+                ]]) {
+                    script {
+                        sh '''
+                        echo "🔄 Updating image in Kubernetes manifest..."
+
+                        ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+                        IMAGE_URI=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG
+
+                        echo "✅ Image URI: $IMAGE_URI"
+
+                        sed -i.bak "s|image:.*|image: $IMAGE_URI|" k8s/deployment.yaml
+
+                        cat k8s/deployment.yaml
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                script {
+                    sh '''
+                    echo "🚀 Applying manifest to EKS cluster..."
+                    kubectl apply -f k8s/deployment.yaml
+
+                    echo "🔍 Verifying rollout..."
+                    kubectl rollout status deployment/springboot-petclinic -n default || exit 1
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Successfully deployed image to EKS!"
+        }
+        failure {
+            echo "❌ Deployment failed. Check logs above."
+        }
+    }
+}
 
