@@ -14,15 +14,12 @@ pipeline {
                     sh '''
                     echo "▶️ Running Security Scan with Trivy..."
 
-                    # Define a user-writable directory for Trivy installation
                     export TRIVY_PATH="$WORKSPACE/trivy"
-                    
-                    # Install Trivy if not already installed
+
                     if ! [ -x "$TRIVY_PATH" ]; then
                         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $WORKSPACE
                     fi
 
-                    # Run security scan using the local Trivy binary
                     $TRIVY_PATH fs --exit-code 0 --severity HIGH,CRITICAL .
                     '''
                 }
@@ -36,7 +33,6 @@ pipeline {
                     echo "▶️ Building Spring Boot Application..."
                     java -version || { echo "❌ ERROR: Java is not installed!"; exit 1; }
 
-                    # Use full path to Maven
                     /opt/homebrew/Cellar/maven/3.9.10/libexec/bin/mvn -version || { echo "❌ ERROR: Maven is not installed!"; exit 1; }
 
                     /opt/homebrew/Cellar/maven/3.9.10/libexec/bin/mvn clean package -DskipTests -Dcheckstyle.skip=true
@@ -46,10 +42,10 @@ pipeline {
                 }
             }
         }
-        
+
         stage('SonarQube Analysis') {
             environment {
-                SONARQUBE_SCANNER_HOME = tool 'SonarQubeScanner'  // Name of your SonarQube scanner tool configured in Jenkins
+                SONARQUBE_SCANNER_HOME = tool 'SonarQubeScanner'
             }
             steps {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
@@ -68,7 +64,54 @@ pipeline {
                 }
             }
         }
-    }  // <-- Closing 'stages' block
+
+        stage('Run Spring Boot App (Temporary for DAST)') {
+            steps {
+                script {
+                    sh '''
+                    echo "▶️ Starting Spring Boot app in background for ZAP scan..."
+                    nohup java -jar target/*.jar > app.log 2>&1 &
+                    sleep 15
+                    curl -I http://localhost:8080 || { echo "❌ App failed to start"; exit 1; }
+                    '''
+                }
+            }
+        }
+
+        stage('DAST - OWASP ZAP Scan') {
+            steps {
+                script {
+                    sh '''
+                    echo "▶️ Running OWASP ZAP Baseline Scan..."
+
+                    docker pull owasp/zap2docker-stable
+
+                    docker run --rm -v $WORKSPACE:/zap/wrk:rw -t owasp/zap2docker-stable zap-baseline.py \
+                        -t http://host.docker.internal:8080 \
+                        -g gen.conf \
+                        -r zap_report.html \
+                        -x zap_report.xml
+
+                    echo "✅ ZAP Scan completed!"
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap_report.*', fingerprint: true
+                }
+            }
+        }
+
+        stage('Stop Spring Boot App') {
+            steps {
+                sh '''
+                echo "🧹 Stopping Spring Boot app..."
+                pkill -f 'spring-petclinic'
+                '''
+            }
+        }
+    }
 
     post {
         success {
@@ -78,4 +121,4 @@ pipeline {
             echo "❌ Pipeline failed. Check logs!"
         }
     }
-}  // <-- Closing 'pipeline' block
+}
