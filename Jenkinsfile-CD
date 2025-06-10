@@ -6,7 +6,6 @@ pipeline {
         REPO_NAME  = 'springboot-petclinic'
         IMAGE_TAG  = 'latest'
         ACCOUNT_ID = '653858193746'
-        
     }
 
     stages {
@@ -42,31 +41,30 @@ pipeline {
 
         stage('Deploy to EKS') {
             environment {
-            AWS_REGION = 'us-east-1'              // Change as needed
-            CLUSTER_NAME = 'springboot-eks-cluster' // Change to your real EKS cluster name
+                AWS_REGION = 'us-east-1'
+                CLUSTER_NAME = 'springboot-eks-cluster'
             }
             steps {
                 withCredentials([[
-                $class: 'AmazonWebServicesCredentialsBinding',
-                credentialsId: 'AWS_Credentials'
-            ]]) 
-            {
-                script {
-                    sh '''
-                    echo "🔐 Setting up kubeconfig for EKS cluster..."
-                    aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'AWS_Credentials'
+                ]]) {
+                    script {
+                        sh '''
+                        echo "🔐 Setting up kubeconfig for EKS cluster..."
+                        aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-                    echo "🚀 Applying manifest to EKS cluster..."
-                    kubectl apply -f k8s/deployment.yaml
+                        echo "🚀 Applying manifest to EKS cluster..."
+                        kubectl apply -f k8s/deployment.yaml
 
-                    echo "📊 Verifying deployment rollout..."
-                    kubectl rollout status deployment/springboot-petclinic
-                    '''
+                        echo "📊 Verifying deployment rollout..."
+                        kubectl rollout status deployment/springboot-petclinic
+                        '''
+                    }
                 }
             }
-         }
-    }
-
+        } // ← ✅ this was missing
+    } // ← ✅ closes the `stages` block
 
     post {
         success {
@@ -77,4 +75,3 @@ pipeline {
         }
     }
 }
-
