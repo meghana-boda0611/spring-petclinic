@@ -84,7 +84,7 @@ pipeline {
                     sh '''
                     echo "▶️ Running OWASP ZAP Baseline Scan..."
 
-                    docker pull owasp/zap2docker-stable
+                    docker pull ghcr.io/zaproxy/zap-full-scan
 
                     docker run --rm -v $WORKSPACE:/zap/wrk:rw -t owasp/zap2docker-stable zap-baseline.py \
                         -t http://host.docker.internal:8080 \
