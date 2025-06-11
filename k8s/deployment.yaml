@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: petclinic
-        image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/springboot-petclinic:latest
+        image: 653858193746.dkr.ecr.us-east-1.amazonaws.com/springboot-petclinic:latest
         ports:
         - containerPort: 8080
