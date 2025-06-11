@@ -104,9 +104,8 @@ pipeline {
                 }
             }
         }
-        
         stage('Docker Build & Push to ECR') {
-                environment {
+            environment {
                 AWS_REGION = 'us-east-1' // Change if needed
                 REPO_NAME  = 'springboot-petclinic' // Change if needed
             }
@@ -123,11 +122,11 @@ pipeline {
                         ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
                         IMAGE_NAME=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME
 
-                        echo "🐳 Building Docker image..."
-                        docker build -t $IMAGE_NAME:latest .
+                        echo "🐳 Setting up Docker Buildx (multi-platform build)..."
+                        docker buildx create --use || true
 
-                        echo "📤 Pushing image to ECR..."
-                        docker push $IMAGE_NAME:latest
+                        echo "🐳 Building and pushing Docker image for linux/amd64..."
+                        docker buildx build --platform linux/amd64 -t $IMAGE_NAME:latest --push .
 
                         echo "✅ Docker image pushed to ECR: $IMAGE_NAME:latest"
                         '''
@@ -136,6 +135,7 @@ pipeline {
             }
         }
 
+        
         stage('Stop Spring Boot App') {
             steps {
                 sh '''
