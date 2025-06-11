@@ -149,18 +149,12 @@ pipeline {
     post {
         success {
             echo "✅ Pipeline completed successfully!"
-        }
-        failure {
-            echo "❌ Pipeline failed. Check logs!"
-        }
-    }
-    post {
-        success {
             mail to: 'vivekmokkarala09@gmail.com',
                 subject: "✅ Jenkins Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 body: "The Jenkins build for ${env.JOB_NAME} #${env.BUILD_NUMBER} was successful.\nCheck details at ${env.BUILD_URL}"
         }
         failure {
+            echo "❌ Pipeline failed. Check logs!"
             mail to: 'vivekmokkarala09@gmail.com',
                 subject: "❌ Jenkins Build FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 body: "The Jenkins build for ${env.JOB_NAME} #${env.BUILD_NUMBER} has failed.\nCheck details at ${env.BUILD_URL}"
@@ -168,8 +162,5 @@ pipeline {
         always {
             echo "📧 Email notification sent"
         }
-    }
+    }   
 }
-
-
-
